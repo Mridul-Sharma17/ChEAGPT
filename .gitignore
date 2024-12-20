@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Virtual Environment
+env/
+venv/
+ENV/
+.venv/
+
+# Python virtual environment binary files
+bin/
+lib/
+include/
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
