@@ -34,28 +34,6 @@ def create_vector_store(text_chunks):
 
 def main():
     raw_text = get_pdf_text()
-    extra_text = """
-    Schedule of Summer Term (C) / Summer Courses
-    The following are the key events and deadlines for the summer term, along with their respective dates:
-    1. Last Date to Receive List of Summer Courses from Academic Units
-    Date: 30th April 2025 (Wednesday)
-    2. Display of Summer Courses List on ASC
-    Date: 7th May 2025 (Wednesday)
-    3. Registration
-    Dates: 14th May 2025 (Wednesday) to 19th May 2025 (Monday)
-    4. Instruction Begins
-    Date: 20th May 2025 (Tuesday)
-    5. Last Date for Course Adjustment
-    Date: 27th May 2025 (Tuesday)
-    6. Last Date of Instruction
-    Date: 12th July 2025 (Saturday)
-    7. Term-End Final Exam
-    Dates: 13th July 2025 (Sunday) to 17th July 2025 (Thursday)
-    8. Last Date for Showing Evaluated Answer Scripts
-    Date: 19th July 2025 (Saturday)
-    9. Online Submission of Grades
-    Dates: 13th July 2025 (Sunday) to 20th July 2025 (Sunday)
-    """
     text_chunks = get_text_chunks(raw_text)
     create_vector_store(text_chunks)
 
