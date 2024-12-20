@@ -33,7 +33,7 @@ GOOGLE_API_KEY=your_api_key_here
 ```
 
 ## Project Structure
-- `vector_store.py`: Creates vector embeddings from the PDF
+- `extractor.py`: Creates vector embeddings from the PDF
 - `app.py`: Main Streamlit application
 - `Chea Handbook Final.pdf`: Source PDF document
 - `rulebook_vector_store/`: Directory containing vector embeddings
@@ -43,7 +43,7 @@ GOOGLE_API_KEY=your_api_key_here
 ### 1. Generate Vector Store
 First, run the vector store creation script:
 ```bash
-python vector_store.py
+python extractor.py
 ```
 
 ### 2. Launch the Application
@@ -78,3 +78,4 @@ ChEAGPT is owned by Mridul Sharma
 
 ## Contributing
 Feel free to submit issues and enhancement requests.
+
