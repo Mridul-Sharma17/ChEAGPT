@@ -8,74 +8,82 @@ ChEAGPT is an AI-powered application that helps users interact with the ChEA Han
 ### Prerequisites
 - Python 3.8 or higher
 - ChEA Handbook PDF file
-- Google API key
+- Multiple Google API keys for redundancy
 
 ### Virtual Environment Setup
 ```bash
-# Create virtual environment
 python -m venv cheagpt_env
-
-# Activate virtual environment
-## For Windows
-cheagpt_env\Scripts\activate
-## For Linux/MacOS
-source cheagpt_env/bin/activate
-
-# Install required packages
+source cheagpt_env/bin/activate  # Linux/MacOS
+# or
+cheagpt_env\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
 ### Environment Configuration
-1. Create a `.env` file in the project root
-2. Add your Google API key:
+Create a `.env` file with multiple API keys:
 ```
-GOOGLE_API_KEY=your_api_key_here
+GOOGLE_API_KEY_1=your_first_key
+GOOGLE_API_KEY_2=your_second_key
+GOOGLE_API_KEY_3=your_third_key
+GOOGLE_API_KEY_4=your_fourth_key
 ```
 
-## Project Structure
-- `extractor.py`: Creates vector embeddings from the PDF
-- `app.py`: Main Streamlit application
-- `Chea Handbook Final.pdf`: Source PDF document
-- `rulebook_vector_store/`: Directory containing vector embeddings
+## Components
+
+### 1. Extractor (extractor.py)
+- Extracts text from PDF
+- Splits text into manageable chunks
+- Creates FAISS vector store using Google's embeddings
+
+### 2. Cache Generator (cache_generator.py)
+- Implements semantic caching system
+- Pre-generates cache for common queries
+- Optimizes response time
+- Handles multiple API keys
+
+### 3. Main Application (app.py)
+- Streamlit-based user interface
+- Implements question-answering system
+- Features multiple API key failover
+- Markdown formatting for responses
 
 ## Usage
 
-### 1. Generate Vector Store
-First, run the vector store creation script:
+1. Generate vector store:
 ```bash
 python extractor.py
 ```
 
-### 2. Launch the Application
-Start the Streamlit application:
+2. Generate cache (optional):
+```bash
+python cache_generator.py
+```
+
+3. Launch application:
 ```bash
 streamlit run app.py
 ```
 
-### 3. Using the Interface
-- Enter your question in the text input field
-- Wait for the AI to process and provide a formatted response
-- Verify the information with the official ChEA Handbook
-
 ## Features
-- PDF text extraction
-- Text chunking and vector embeddings
-- Efficient caching system
+- Robust API key management
+- Semantic caching system
 - Markdown-formatted responses
-- Context-aware answers
-- User-friendly interface
+- Multiple failover mechanisms
+- Pre-generated cache for common queries
 
-## Performance Optimization
-- LRU cache for conversation chain
-- Disk-based caching for similarity search results
-- Efficient vector store implementation
+## Performance Optimizations
+- Multi-level caching (memory and disk)
+- API key redundancy
+- Efficient vector similarity search
+- Response streaming
 
-## Important Note
-The application should be used as a reference tool. Always verify important information with the official ChEA Handbook.
+## Important Notes
+- Always verify information with official ChEA Handbook
+- System uses multiple API keys for reliability
+- Responses are cached for better performance
 
 ## License
 ChEAGPT is owned by Mridul Sharma
 
 ## Contributing
 Feel free to submit issues and enhancement requests.
-

@@ -7,6 +7,9 @@ venv/
 ENV/
 .venv/
 
+# Temporarily used files
+all links.txt
+
 # Python virtual environment binary files
 bin/
 lib/
