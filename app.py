@@ -42,7 +42,7 @@ def initialize_resources():
     for key in api_keys:
         try:
             genai.configure(api_key=key)
-            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            model = genai.GenerativeModel('gemini-2.0-flash-thinking-exp-1219')
             response = model.generate_content("test")
             
             # Initialize embeddings
