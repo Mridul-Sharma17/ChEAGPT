@@ -4,6 +4,7 @@ import joblib
 import numpy as np
 import random
 from dotenv import load_dotenv
+import time
 
 import google.generativeai as genai
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
@@ -28,10 +29,10 @@ def initialize_resources():
         os.getenv("GOOGLE_API_KEY_3"),
         os.getenv("GOOGLE_API_KEY_4")
     ]
-    
+
     # Remove any None or empty keys from the list
     api_keys = [key for key in api_keys if key]
-    
+
     # If there are no valid keys, raise an error
     if not api_keys:
         raise Exception("No valid API key available")
@@ -42,22 +43,22 @@ def initialize_resources():
     for key in api_keys:
         try:
             genai.configure(api_key=key)
-            model = genai.GenerativeModel('gemini-2.0-flash-thinking-exp-1219')
+            model = genai.GenerativeModel('gemini-2.0-flash-thinking-exp') # or try 'gemini-1.5-flash' or 'gemini-pro'
             response = model.generate_content("test")
-            
+
             # Initialize embeddings
             embeddings = GoogleGenerativeAIEmbeddings(
                 model="models/text-embedding-004",
                 google_api_key=key
             )
-            
+
             # Load FAISS index
             faiss_index = FAISS.load_local(
-                "rulebook_vector_store", 
+                "rulebook_vector_store",
                 embeddings,
                 allow_dangerous_deserialization=True
             )
-            
+
             return {
                 "api_key": key,
                 "embeddings": embeddings,
@@ -66,7 +67,7 @@ def initialize_resources():
         except Exception as e:
             print(f"API key error: {str(e)}")
             continue
-    
+
     raise Exception("No valid API key available")
 
 @st.cache_data(show_spinner=False)
@@ -85,34 +86,12 @@ def load_cache_from_disk(cache_name: str):
 
 
 @st.cache_resource(show_spinner=False)
-def get_conversation_chain(_api_key):
-    """Return a conversation chain using the cached API key."""
-    prompt_template = """
-    Answer the question using the provided context. Ensure the response is comprehensive and beautifully formatted in Markdown as follows:
-    - **Headings:** Use ### for headings and only headings, not for normal text.
-    - **Subheadings:** Use #### for subheadings and only subheadings, not for normal text.
-    - **Normal Text:** Write normal text without any special characters.
-    - **Details:** Use bullet points (- ) or numbered lists (1. ) for clarity.
-    - **New Lines:** Use double new lines (\\n\\n) to separate paragraphs and sections.
-    - **Emphasis:** Use ** for bold and _ for italics to highlight important information.
+def get_generative_model(_api_key):
+    """Return a generative model using the cached API key."""
+    genai.configure(api_key=_api_key)
+    model = genai.GenerativeModel('gemini-2.0-flash-thinking-exp-1219') # or try 'gemini-1.5-flash' or 'gemini-pro'
+    return model
 
-    If the answer is not available in the provided context, clearly state:
-    "The exact answer to this question is not available in the documentation. Here are some relevant details:"
-    Then explain the relevant details in a clear and concise manner.
-
-    Context: {context}
-
-    Question: {question}
-
-    Answer:
-    """
-    model = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp",
-        temperature=0,
-        google_api_key=_api_key
-    )
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 @st.cache_data(show_spinner=False)
 def cached_similarity_search(question: str, _resources):
@@ -126,49 +105,68 @@ def cached_similarity_search(question: str, _resources):
     # Perform Search using FAISS index
     return _resources["faiss_index"].similarity_search(question)
 
+def stream_response(model, prompt):
+    """Streams the response from the model and displays it in Streamlit."""
+    placeholder = st.empty()
+    full_response = ""
+    response_stream = model.generate_content(prompt, stream=True)
+    for chunk in response_stream:
+        text_chunk = chunk.text # Extract text explicitly
+        full_response += text_chunk
+        # print("--- Raw Text Chunk ---")
+        # print(repr(text_chunk)) # Use repr() to show special characters like backticks clearly
+        # print("--- End Chunk ---")
+        placeholder.markdown(full_response + "▌", unsafe_allow_html=False)
+    placeholder.markdown(full_response, unsafe_allow_html=False)
+    # print("\n--- Final Raw Text Response ---")
+    # print(repr(full_response)) # Use repr() for final output too
+    # print("--- End Final Response ---")
+
 def process_question(question, resources):
-    """Generate an answer with caching."""
-    question = question + ". Provide a comprehensive and informative explanation. If there is any relevant link or reference, please provide that as well."
+    """Generate an answer with caching and streaming."""
+    question_with_instructions = question + ". Provide a comprehensive and informative explanation. If there is any relevant link or reference, please provide that as well. **Do not give information which is incorrect or incomplete.** **Format the response clearly and concisely.** **Ensure the answer is accurate and addresses all aspects of the question.** **Avoid vague or generic responses.** **Strictly do not reference the source document explicitly (e.g., avoid phrases like 'the provided documentation', 'the document says' or 'text mentions' or similar meaning phrases) instead answer as if you are answering from you own knowledge, if any link or reference is given then give it enclosed in some text where when clicked, it opens the link, also show what it is for.** **Strictly Present the information naturally and independently, as if explaining from knowledge.** **Use headings or bullet points to improve readability.** **Include tables if they add clarity or structure to the answer.** **If information is limited, state 'Based on the available information...' and provide the most relevant details.**"
+
     docs = cached_similarity_search(question, resources)
-    
-    query_modifier = """
-        **Do not give information which is incorrect or incomplete.**
-        **Format the response clearly and concisely.**
-        **Ensure the answer is accurate and addresses all aspects of the question.**
-        **Avoid vague or generic responses.**
-        **Strictly do not reference the source document explicitly (e.g., avoid phrases like 'the provided documentation', 'the document says' or 'text mentions' or similar meaning phrases) instead answer as if you are answering from you own knowledge, if any link or reference is given then give it enclosed in some text where when clicked, it opens the link, also show what it is for.**
-        **Strictly Present the information naturally and independently, as if explaining from knowledge.**
-        **Use headings or bullet points to improve readability.**
-        **Include tables if they add clarity or structure to the answer.**
-        **If information is limited, state 'Based on the available information...' and provide the most relevant details.**
+
+    context_text = "\n\n".join([doc.page_content for doc in docs])
+
+    prompt_template = """
+    Answer the question using the provided context.  **Your response MUST be formatted as TEXT with Markdown elements, NOT as a Markdown code block.**
+
+    **CRITICAL FORMATTING RULES - FOLLOW THESE EXACTLY:**
+
+    **1.  NO CODE BLOCKS!  ABSOLUTELY DO NOT USE ANY CODE BLOCKS!**  Do not enclose *any* part of your response in triple backticks (```) or single backticks (`). Your output must be rendered directly as Markdown, not as code.
+
+    2.  Format your answer beautifully in Markdown as follows for TEXT ELEMENTS ONLY:
+
+        - **Headings:** Use ### for headings and only headings, not for normal text.
+        - **Subheadings:** Use #### for subheadings and only subheadings, not for normal text.
+        - **Normal Text:** Write normal text without any special characters (except for Markdown formatting).
+        - **Details:** Use bullet points (- ) or numbered lists (1. ) for clarity.
+        - **New Lines:** Use double new lines (\\n\\n) to separate paragraphs and sections.
+        - **Emphasis:** Use ** for bold and _ for italics to highlight important information.
+
+    3.  If the answer is not available in the provided context, clearly state:
+        "The exact answer to this question is not available in the documentation. Here are some relevant details:"
+        Then explain the relevant details in a clear and concise manner using the Markdown formatting rules above.
+
+    Context: {context}
+
+    Question: {question}
+
+    Answer:
     """
 
-    question += query_modifier
-    chain = get_conversation_chain(resources["api_key"])
-    response = chain({"input_documents": docs, "question": question}, return_only_outputs=True)
-    response_text = response["output_text"]
-    st.write(response_text)
-    
-    # # Markdown Formatting Fixes
-    # formatted_response = response_text.strip()
-    # formatted_response = formatted_response.replace("\n", "\n\n")
+    prompt = prompt_template.format(context=context_text, question=question_with_instructions)
 
-    # placeholder = st.empty()
+    model = get_generative_model(resources["api_key"])
+    stream_response(model, prompt)
 
-    # # Stream by paragraphs or sentences
-    # paragraphs = formatted_response.split("\n\n")
-    # streamed_text = ""
-    # for paragraph in paragraphs:
-    #     streamed_text += "\n\n"
-    #     for word in paragraph.split():
-    #         streamed_text += word + " "
-    #         placeholder.markdown(streamed_text, unsafe_allow_html=False)
-    #         time.sleep(0.01)
 
 def main():
     st.set_page_config(page_title="ChEAGPT")
     st.header("ChEAGPT")
-    
+
     # Initialize resources once and store in session state
     if "resources" not in st.session_state:
         try:
