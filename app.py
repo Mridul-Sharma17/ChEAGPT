@@ -106,21 +106,17 @@ def cached_similarity_search(question: str, _resources):
     return _resources["faiss_index"].similarity_search(question)
 
 def stream_response(model, prompt):
-    """Streams the response from the model and displays it in Streamlit."""
+    """Streams the response from the model and displays it in Streamlit with letter-by-letter effect."""
     placeholder = st.empty()
     full_response = ""
     response_stream = model.generate_content(prompt, stream=True)
     for chunk in response_stream:
-        text_chunk = chunk.text # Extract text explicitly
-        full_response += text_chunk
-        # print("--- Raw Text Chunk ---")
-        # print(repr(text_chunk)) # Use repr() to show special characters like backticks clearly
-        # print("--- End Chunk ---")
-        placeholder.markdown(full_response + "▌", unsafe_allow_html=False)
+        text_chunk = chunk.text or "" # Handle cases where chunk.text might be None
+        for char in text_chunk: # Iterate through each character
+            full_response += char
+            placeholder.markdown(full_response + "▌", unsafe_allow_html=False)
+            time.sleep(0.001) # Add a small delay for the streaming effect, adjust as needed
     placeholder.markdown(full_response, unsafe_allow_html=False)
-    # print("\n--- Final Raw Text Response ---")
-    # print(repr(full_response)) # Use repr() for final output too
-    # print("--- End Final Response ---")
 
 def process_question(question, resources):
     """Generate an answer with caching and streaming."""
