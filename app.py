@@ -171,12 +171,12 @@ def main():
             st.error(f"Failed to initialize resources: {str(e)}")
             return
 
-    user_question = st.text_input("Ask a question about the ChEA Handbook:")
+    user_question = st.text_input("Ask any question about institute policies:")
     if user_question:
         try:
             with st.spinner("Thinking..."):
                 process_question(user_question, st.session_state.resources)
-                st.write("ChEAGPT can make mistakes. It is advisable to verify the information from ChEA Handbook.")
+                st.write("ChEAGPT can make mistakes. It is advisable recheck the information")
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
 
